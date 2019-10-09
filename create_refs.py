@@ -25,10 +25,12 @@ def click_event(event, x, y, flags, param):
 
 # Save img to file
 def get_roi(pos, pos2):
-    roi = frame[pos[1]: pos2[1], pos[0]: pos2[0]]
-    filename = 'ref/ball-' + str(int(time.time())) + '.png'
-    print(filename)
-    cv2.imwrite(filename, roi)
+    if pos[0] < pos2[0]:
+        if pos[1] < pos2[1]:
+            roi = frame[pos[1]: pos2[1], pos[0]: pos2[0]]
+            filename = 'ref/ball-' + str(int(time.time())) + '.png'
+            print(filename)
+            cv2.imwrite(filename, roi)
 
 
 # Main Loop
