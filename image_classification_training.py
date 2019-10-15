@@ -1,4 +1,3 @@
-import keras
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Flatten
 from keras.layers import Conv2D, MaxPooling2D
@@ -6,11 +5,12 @@ from keras.utils import to_categorical
 from keras.preprocessing import image
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 import glob
-import os
+import time
+
+TEST_MODEL = False
 
 train = pd.read_csv('data/annotated_data/annotations.csv')
 train_images = []
@@ -40,19 +40,24 @@ model.add(Dense(2, activation='softmax'))
 
 model.compile(loss='categorical_crossentropy', optimizer='Adam', metrics=['accuracy'])
 
-model.fit(X_train, y_train, epochs=10, validation_data=(X_test,y_test))
+history = model.fit(X_train, y_train, epochs=10, validation_data=(X_test,y_test))
 
-model
+try:
+    model.save('models/' + str(history.history.get('accuracy')[-1]) + "-" + str(int(time.time())) + '.h5')
+    print("Model Saved: " + str(history.history.get('accuracy')[-1]) + "-" + str(int(time.time())) + '.h5')
+except:
+    print("Something went wrong")
 
-test_image = []
-for file in glob.glob("test_data/*.png"):
-    img = image.load_img(file, target_size=(28, 28, 3), grayscale=False)
-    img = image.img_to_array(img)
-    img = img / 255
-    test_image.append(img)
+if TEST_MODEL:
+    test_image = []
+    for file in glob.glob("data/test_data/*.png"):
+        img = image.load_img(file, target_size=(28, 28, 3), grayscale=False)
+        img = image.img_to_array(img)
+        img = img / 255
+        test_image.append(img)
 
-test = np.array(test_image)
-prediction = model.predict_classes(test)
+    test = np.array(test_image)
+    prediction = model.predict_classes(test)
 
-print(prediction)
+    print(prediction)
 
