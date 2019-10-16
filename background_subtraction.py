@@ -3,7 +3,7 @@ from keras.models import load_model
 from keras.preprocessing import image
 import numpy as np
 
-USE_IMAGE_CLASSIFICATION_MODEL = True  # Determine whether to used image classification model
+USE_IMAGE_CLASSIFICATION_MODEL = False  # Determine whether to used image classification model
 MODEL = "0.9818182-1571182058"  # Model name to be used (.h5 format)
 CREATE_TRAINING_DATA = False  # Used to create training set in data/
 VID_NAME = "vid1"  # Video file found in vids/
@@ -67,12 +67,14 @@ while True:
                     max_index = probabilities.index(max(probabilities))
                     x, y, w, h = cv2.boundingRect(contours[max_index])
                     cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
-
                 else:
+                    probabilities = [1 for i in range(len(contours))]
                     c = max(contours, key=cv2.contourArea)
                     cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
                     x, y, w, h = cv2.boundingRect(c)
                     cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    print(probabilities)
+
 
     cv2.imshow('original', frame)
     cv2.imshow('opened', opening)
