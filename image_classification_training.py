@@ -10,7 +10,7 @@ from tqdm import tqdm
 import glob
 import time
 
-TEST_MODEL = False
+TEST_MODEL = True
 
 train = pd.read_csv('data/annotated_data/annotations.csv')
 train_images = []
@@ -57,7 +57,8 @@ if TEST_MODEL:
         test_image.append(img)
 
     test = np.array(test_image)
-    prediction = model.predict_classes(test)
+    prediction = model.predict_proba(test)
+    prediction2 = model.predict_classes(test)
 
-    print(prediction)
+    print(prediction, prediction2)
 
