@@ -6,7 +6,7 @@ import numpy as np
 USE_MODEL = True
 MODEL = "0.9818182-1571182058"
 CREATE_TRAINING_DATA = False
-VID_NAME = "vid1"
+VID_NAME = "vid2"
 VID_FORMAT = ".mp4"
 
 cap = cv2.VideoCapture("vids/" + VID_NAME + VID_FORMAT)
@@ -16,6 +16,24 @@ model = None
 
 if USE_MODEL:
     model = load_model('models/' + MODEL + '.h5')
+
+
+def classify_contours(contour_list, target_frame):
+    probs = []
+    for c in contour_list:
+        x, y, w, h = cv2.boundingRect(c)
+        roi = target_frame[y: y + h, x: x + w]
+        img = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(img, (28, 28))
+        img = image.img_to_array(img)
+        img = img / 255.0
+        img = np.expand_dims(img, axis=0)
+        probability = model.predict_proba(img)
+        probs.append(probability[0][1])
+        cv2.putText(frame, str(probability[0][1]), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255))
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    return probs
+
 
 while True:
     ret, frame = cap.read()
@@ -29,7 +47,7 @@ while True:
     if frame_n > 1:
         contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         if contours:
-            if len(contours) < 100000:
+            if len(contours) < 100:
                 if CREATE_TRAINING_DATA:
                     for i, c in enumerate(contours):
                         x, y, w, h = cv2.boundingRect(c)
@@ -39,21 +57,10 @@ while True:
                                 filename = 'data/' + VID_NAME + '-' + str(frame_n) + '-' + str(i) + '.png'
                                 cv2.imwrite(filename, roi)
                 if USE_MODEL:
-                    images = []
-                    for c in contours:
-                        x, y, w, h = cv2.boundingRect(c)
-                        roi = frame[y: y + h, x: x + w]
-                        img = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
-                        img = cv2.resize(img, (28,28))
-                        img = image.img_to_array(img)
-                        img = img / 255.0
-                        img = np.expand_dims(img, axis=0)
-                        probability = model.predict_proba(img)
-                        images.append(probability[0][1])
-                        print(probability)
-                        cv2.putText(frame, str(probability[0][1]), (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,255))
-                        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                    max_index = images.index(max(images))
+                    probabilities = classify_contours(contours, frame)
+
+                    # TODO: Change this naive ball finding
+                    max_index = probabilities.index(max(probabilities))
                     x, y, w, h = cv2.boundingRect(contours[max_index])
                     cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
