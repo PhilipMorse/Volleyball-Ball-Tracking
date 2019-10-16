@@ -13,3 +13,7 @@ This file is used to manually determine whether each obtained image is a ball or
 **create_refs.py**
 
 This file is used to manually select regions that have a ball in a video
+
+**image_classification_training.py**
+
+This file is used to create a keras model to be used in background_subtraction.py
