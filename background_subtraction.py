@@ -12,7 +12,7 @@ VID_FORMAT = ".mp4"  # Video format
 KERNEL_RESOLUTION = 200  # Higher = More objects detected in frame
 MAX_CONTOURS = 100  # Limit the number of contours for performance
 PREDICT_BALL_LOCATION = True  # Turn on to keep ball location predictions history
-#CLASSIFICATION_THRESHOLD = 0  # 0-1 Which contours to evaluate for predictions
+CLASSIFICATION_THRESHOLD = 0.2  # 0-1 Which contours to evaluate for predictions
 
 cap = cv2.VideoCapture("vids/" + VID_NAME + VID_FORMAT)
 cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
@@ -29,8 +29,7 @@ if USE_IMAGE_CLASSIFICATION_MODEL:
 # TODO: Improve prediction code
 class Prediction:
     def __init__(self, frame_n, x, y):
-        self.confidence = 0
-        self.hist = [[frame_n, x, y, 0, 0]]  # [frame_n, x, y, dx, dy]
+        self.hist = [[frame_n, x, y, 10000, 1000]]  # [frame_n, x, y, dx, dy]
 
     def new_point(self, frame_n, x, y):
         self.hist.append([
@@ -40,7 +39,6 @@ class Prediction:
             (x - self.hist[-1][1]) / (frame_n - self.hist[-1][0]),
             (y - self.hist[-1][2]) / (frame_n - self.hist[-1][0])
         ])
-        self.confidence+=1
 
     def predict(self, frame_n):
         return [
@@ -49,8 +47,8 @@ class Prediction:
         ]
 
 
-    def confidence(self):
-        return self.confidence
+    def confidence(self, frame_n):
+        return (((2*((self.hist[-1][3]**2)+(self.hist[-1][4]**2)**0.5))**(frame_n-self.hist[-1][0]))+100)
 
 
 def classify_contours(contour_list, target_frame):
@@ -65,7 +63,7 @@ def classify_contours(contour_list, target_frame):
         img = np.expand_dims(img, axis=0)
         probability = model.predict_proba(img)
         probs.append(probability[0][1])
-        cv2.putText(frame, str(probability[0][1]), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255))
+        #cv2.putText(frame, str(probability[0][1]), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255))
         #cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
     return probs
 
@@ -102,18 +100,35 @@ if RUN_VIDEO:
                         # TODO: Change this naive ball finding
                         if PREDICT_BALL_LOCATION:
                             predicted_location = prediction.predict(frame_n)
+                            predicted_confidence = prediction.confidence(frame_n)
                             potentials = []
                             for i, p in enumerate(probabilities):
                                 x, y, w, h = cv2.boundingRect(contours[i])
                                 dist = distance(predicted_location,[x+w/2,y+h/2])
                                 if dist<1:
                                     dist = 1
-                                potentials.append(p/dist)
-                            max_potential = potentials.index(max(potentials))
-                            x, y, w, h = cv2.boundingRect(contours[max_potential])
-                            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                            prediction.new_point(frame_n,x+w/2,y+h/2)
+                                if dist<predicted_confidence:
+                                    if p>CLASSIFICATION_THRESHOLD:
+                                        print(dist,predicted_confidence)
+                                        cv2.putText(frame, str(dist), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255))
+                                        potentials.append(p/dist)
+                                    else:
+                                        potentials.append(0)
+                                else:
+                                    potentials.append(0)
+                            max_value = max(potentials)
+                            if max_value>0:
+                                max_potential = potentials.index(max_value)
+                                x, y, w, h = cv2.boundingRect(contours[max_potential])
+                                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                                prediction.new_point(frame_n,x+w/2,y+h/2)
                                 #TODO: Implement Machine Learning Training
+                            else:
+                                x = int(predicted_location[0])
+                                y = int(predicted_location[1])
+                                cv2.rectangle(frame, (x, y), (x+10, y+10), (0, 0, 255), 2)
+                                prediction.new_point(frame_n,x,y)
+
 
                         else:
                             max_index = probabilities.index(max(probabilities))
