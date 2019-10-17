@@ -7,7 +7,7 @@ RUN_VIDEO = True  # Run Main Loop
 USE_IMAGE_CLASSIFICATION_MODEL = True  # Determine whether to used image classification model
 MODEL = "0.9818182-1571182058"  # Model name to be used (.h5 format)
 CREATE_TRAINING_DATA = False  # Used to create training set in data/
-VID_NAME = "vid3"  # Video file found in vids/
+VID_NAME = "vid2"  # Video file found in vids/
 VID_FORMAT = ".mp4"  # Video format
 KERNEL_RESOLUTION = 200  # Higher = More objects detected in frame
 MAX_CONTOURS = 100  # Limit the number of contours for performance
@@ -87,7 +87,6 @@ if RUN_VIDEO:
         if frame_n > 1:
             contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             if contours:
-                cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
                 if len(contours) < MAX_CONTOURS:
                     if CREATE_TRAINING_DATA:
                         for i, c in enumerate(contours):
@@ -99,10 +98,6 @@ if RUN_VIDEO:
                                     cv2.imwrite(filename, roi)
                     if USE_IMAGE_CLASSIFICATION_MODEL:
                         probabilities = classify_contours(contours, frame)
-
-                        max_index = probabilities.index(max(probabilities))
-                        x, y, w, h = cv2.boundingRect(contours[max_index])
-                        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
                         # TODO: Change this naive ball finding
                         if PREDICT_BALL_LOCATION:
@@ -118,9 +113,13 @@ if RUN_VIDEO:
                             x, y, w, h = cv2.boundingRect(contours[max_potential])
                             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
                             prediction.new_point(frame_n,x+w/2,y+h/2)
-
-                            print(potentials)
                                 #TODO: Implement Machine Learning Training
+
+                        else:
+                            max_index = probabilities.index(max(probabilities))
+                            x, y, w, h = cv2.boundingRect(contours[max_index])
+                            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
+
                     else:
                         c = max(contours, key=cv2.contourArea)
                         cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
