@@ -2,9 +2,11 @@ import cv2
 import csv
 import numpy as np
 
-FILENAME = "vid1-1571401605"
+FILENAME = "vid2-1571432796"
 
 
+#TODO: create multiple trajectories if certain delay in frames in between
+#TODO: identify hit start frame
 def clean_trajectories(traj):
     output = [[traj[0][0],traj[0][1]]]
 
@@ -31,10 +33,11 @@ def load_trajectories():
     return traj
 
 
-image = cv2.imread("output/" + FILENAME + ".png")
+if __name__ == "__main__":
+    image = cv2.imread("output/" + FILENAME + ".png")
 
-trajectory = load_trajectories()
-cv2.polylines(image, [trajectory], 0, (0, 0, 255), 3)
-cv2.imshow("image",image)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+    trajectory = load_trajectories()
+    cv2.polylines(image, [trajectory], 0, (0, 0, 255), 3)
+    cv2.imshow("image",image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()

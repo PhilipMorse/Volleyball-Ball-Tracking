@@ -16,7 +16,10 @@ KERNEL_RESOLUTION = 200  # Higher = More objects detected in frame
 MAX_CONTOURS = 100  # Limit the number of contours for performance
 PREDICT_BALL_LOCATION = True  # Turn on to keep ball location predictions history
 CLASSIFICATION_THRESHOLD = 0.2  # 0-1 Which contours to evaluate for predictions
-SAVE_OUTPUT = True  # Toggle whether to save the locations of the ball or not
+SAVE_OUTPUT = False  # Toggle whether to save the locations of the ball or not
+BALL_TRAIL_FRAMES = 20  # Number of frames that the trail stays behind the ball
+WAIT_KEY = 0  # Speed of video playback, 0 to manually advance
+SHOW_VIDEO = True  # Whether video is displayed or not
 
 cap = cv2.VideoCapture("vids/" + VID_NAME + VID_FORMAT)
 cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
@@ -30,6 +33,23 @@ if USE_IMAGE_CLASSIFICATION_MODEL:
     model = load_model('models/' + MODEL + '.h5')
 else:
     model = None
+
+
+def clean_trajectories(traj):
+    output = [[traj[0][0],traj[0][1]]]
+
+    for i, t in enumerate(traj[1:]):
+        diff = int(t[2] - traj[i][2])
+        if diff == 1:
+            output.append([t[0], t[1]])
+        else:
+            dx = (t[0] - traj[i][0]) / diff
+            dy = (t[1] - traj[i][1]) / diff
+            for j in range(1, diff + 1):
+                output.append([int(traj[i][0] + (dx * j)), int(traj[i][1] + (dy * j))])
+    output = np.array(output, dtype=np.int32)
+    return output
+
 
 # TODO: Improve prediction code
 class Prediction:
@@ -77,6 +97,7 @@ def distance(arr_a, arr_b):
     return ((arr_a[0] - arr_b[0]) ** 2 + (arr_a[1] - arr_b[1]) ** 2) ** 0.5
 
 output = []
+output_realtime = []
 output_img = None
 prediction = Prediction(0,cap_width/2,cap_height/2)
 if RUN_VIDEO:
@@ -118,6 +139,7 @@ if RUN_VIDEO:
                                     if p>CLASSIFICATION_THRESHOLD:
                                         cv2.putText(frame, str(dist), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255))
                                         potentials.append(p/dist)
+
                                     else:
                                         potentials.append(0)
                                 else:
@@ -130,12 +152,14 @@ if RUN_VIDEO:
                                 prediction.new_point(frame_n,x+w/2,y+h/2)
                                 print(x,y)
                                 output.append([x+w/2,y+h/2,frame_n])
+                                output_realtime = clean_trajectories(output[-BALL_TRAIL_FRAMES:])
                                 #TODO: Implement Machine Learning Training
                             else:
                                 x = int(predicted_location[0])
                                 y = int(predicted_location[1])
                                 cv2.rectangle(frame, (x, y), (x+10, y+10), (0, 0, 255), 2)
                                 prediction.new_point(frame_n,x,y)
+                            cv2.polylines(frame, [output_realtime], 0, (0, 0, 255), 3)
 
 
                         else:
@@ -148,16 +172,18 @@ if RUN_VIDEO:
                         cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
                         x, y, w, h = cv2.boundingRect(c)
                         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        if frame_n == 1:
-            output_img = frame
-        cv2.imshow('original', frame)
-        #cv2.imshow('opened', opening)
 
-        k = cv2.waitKey(1)
-        if k == 27:
-            break
-        if frame_n==num_frames_max:
-            break
+        if SHOW_VIDEO:
+            if frame_n == 1:
+                output_img = frame
+            cv2.imshow('original', frame)
+            #cv2.imshow('opened', opening)
+
+            k = cv2.waitKey(WAIT_KEY)
+            if k == 27:
+                break
+            if frame_n==num_frames_max:
+                break
 
 
 cap.release()
