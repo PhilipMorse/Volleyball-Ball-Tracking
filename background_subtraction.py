@@ -2,29 +2,34 @@ import cv2
 from keras.models import load_model
 from keras.preprocessing import image
 import numpy as np
+import time
+import csv
+
 
 RUN_VIDEO = True  # Run Main Loop
 USE_IMAGE_CLASSIFICATION_MODEL = True  # Determine whether to used image classification model
 MODEL = "0.9818182-1571182058"  # Model name to be used (.h5 format)
 CREATE_TRAINING_DATA = False  # Used to create training set in data/
-VID_NAME = "vid2"  # Video file found in vids/
+VID_NAME = "vid1"  # Video file found in vids/
 VID_FORMAT = ".mp4"  # Video format
 KERNEL_RESOLUTION = 200  # Higher = More objects detected in frame
 MAX_CONTOURS = 100  # Limit the number of contours for performance
 PREDICT_BALL_LOCATION = True  # Turn on to keep ball location predictions history
 CLASSIFICATION_THRESHOLD = 0.2  # 0-1 Which contours to evaluate for predictions
+SAVE_OUTPUT = True  # Toggle whether to save the locations of the ball or not
 
 cap = cv2.VideoCapture("vids/" + VID_NAME + VID_FORMAT)
 cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
 cap_height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+num_frames_max = cap.get(cv2.CAP_PROP_FRAME_COUNT)
 kernel_size = int(cap_width / KERNEL_RESOLUTION)
 fgbg = cv2.createBackgroundSubtractorMOG2(varThreshold=50)
 
-model = None
 
 if USE_IMAGE_CLASSIFICATION_MODEL:
     model = load_model('models/' + MODEL + '.h5')
-
+else:
+    model = None
 
 # TODO: Improve prediction code
 class Prediction:
@@ -71,6 +76,8 @@ def classify_contours(contour_list, target_frame):
 def distance(arr_a, arr_b):
     return ((arr_a[0] - arr_b[0]) ** 2 + (arr_a[1] - arr_b[1]) ** 2) ** 0.5
 
+output = []
+output_img = None
 prediction = Prediction(0,cap_width/2,cap_height/2)
 if RUN_VIDEO:
     while True:
@@ -109,7 +116,6 @@ if RUN_VIDEO:
                                     dist = 1
                                 if dist<predicted_confidence:
                                     if p>CLASSIFICATION_THRESHOLD:
-                                        print(dist,predicted_confidence)
                                         cv2.putText(frame, str(dist), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255))
                                         potentials.append(p/dist)
                                     else:
@@ -122,6 +128,8 @@ if RUN_VIDEO:
                                 x, y, w, h = cv2.boundingRect(contours[max_potential])
                                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
                                 prediction.new_point(frame_n,x+w/2,y+h/2)
+                                print(x,y)
+                                output.append([x+w/2,y+h/2,frame_n])
                                 #TODO: Implement Machine Learning Training
                             else:
                                 x = int(predicted_location[0])
@@ -140,13 +148,23 @@ if RUN_VIDEO:
                         cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
                         x, y, w, h = cv2.boundingRect(c)
                         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
+        if frame_n == 1:
+            output_img = frame
         cv2.imshow('original', frame)
-        cv2.imshow('opened', opening)
+        #cv2.imshow('opened', opening)
 
-        k = cv2.waitKey(0)
+        k = cv2.waitKey(1)
         if k == 27:
             break
+        if frame_n==num_frames_max:
+            break
+
 
 cap.release()
 cv2.destroyAllWindows()
+
+if SAVE_OUTPUT:
+    with open("output/" + VID_NAME + "-" + str(int(time.time())) + ".csv", "a", newline='') as f:
+        writer = csv.writer(f, delimiter=',')
+        writer.writerows(output)
+    cv2.imwrite("output/" + VID_NAME + "-" + str(int(time.time())) + ".png", output_img)
