@@ -17,3 +17,7 @@ This file is used to manually select regions that have a ball in a video
 **image_classification_training.py**
 
 This file is used to create a keras model to be used in background_subtraction.py
+
+**ball_trajectory.py**
+
+This file prints an image with the tracked trajectory previously obtained.
