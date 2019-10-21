@@ -181,7 +181,7 @@ if RUN_VIDEO:
             if frame_n == 1:
                 output_img = frame
             cv2.imshow('original', frame)
-            #cv2.imshow('opened', opening)
+            cv2.imshow('opened', opening)
 
             k = cv2.waitKey(WAIT_KEY)
             if k == 27:
