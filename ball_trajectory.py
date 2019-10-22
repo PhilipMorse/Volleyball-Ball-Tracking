@@ -3,7 +3,7 @@ import csv
 import numpy as np
 import random
 
-FILENAME = "vid3-1571431556"
+FILENAME = "vid1-1571401605"
 THRESHOLD_ANGLE = 30
 
 

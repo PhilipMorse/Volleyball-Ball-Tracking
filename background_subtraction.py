@@ -14,8 +14,9 @@ SAVE_OUTPUT = False  # Toggle whether to save the locations of the ball or not
 BALL_TRAIL_FRAMES = 20  # Number of frames that the trail stays behind the ball
 SHOW_TRAIL = True  # Whether to show a trail or not
 
+SHOW_BACKGROUND_SUBTRACTION = False  # Whether to show detected movement or not
 SHOW_VIDEO = True  # Whether video is displayed or not
-WAIT_KEY = 1  # Speed of video playback, 0 to manually advance
+WAIT_KEY = 30  # Speed of video playback, 0 to manually advance
 
 CREATE_TRAINING_DATA = False  # Used to create training set in data/
 TRAINING_DATA_FOLDER = "mikasa"  # Folder for training data
@@ -29,6 +30,7 @@ CLASSIFICATION_THRESHOLD = 0.2  # 0-1 Which contours to evaluate for predictions
 RUN_VIDEO = True  # Run Main Loop
 PREDICT_BALL_LOCATION = True  # Turn on to keep ball location predictions history
 USE_IMAGE_CLASSIFICATION_MODEL = True  # Determine whether to used image classification model
+
 
 cap = cv2.VideoCapture("vids/" + VID_NAME + VID_FORMAT)
 cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
@@ -148,8 +150,8 @@ if RUN_VIDEO:
                                     dist = 1
                                 if dist < predicted_confidence:
                                     if p > CLASSIFICATION_THRESHOLD:
-                                        cv2.putText(frame, str(dist), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                                    (0, 255, 255))
+                                        #cv2.putText(frame, str(dist), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                        #            (0, 255, 255))
                                         potentials.append(p / dist)
 
                                     else:
@@ -162,7 +164,6 @@ if RUN_VIDEO:
                                 x, y, w, h = cv2.boundingRect(contours[max_potential])
                                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
                                 prediction.new_point(frame_n, x + w / 2, y + h / 2)
-                                print(x, y)
                                 output.append([x + w / 2, y + h / 2, frame_n])
                                 if SHOW_TRAIL:
                                     output_realtime = clean_trajectories(output[-BALL_TRAIL_FRAMES:])
@@ -191,7 +192,8 @@ if RUN_VIDEO:
             if frame_n == 1:
                 output_img = frame
             cv2.imshow('original', frame)
-            cv2.imshow('opened', opening)
+            if SHOW_BACKGROUND_SUBTRACTION:
+                cv2.imshow('opened', opening)
 
             k = cv2.waitKey(WAIT_KEY)
             if k == 27:
