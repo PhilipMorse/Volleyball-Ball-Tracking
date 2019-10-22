@@ -3,11 +3,9 @@ import csv
 import numpy as np
 import random
 
-FILENAME = "vid1-1571401605"
+FILENAME = "vid3-1571431556"
 THRESHOLD_ANGLE = 30
 
-#TODO: create multiple trajectories if certain delay in frames in between
-#TODO: identify hit start frame
 
 def separate_trajectories(traj):
     changes = [1]

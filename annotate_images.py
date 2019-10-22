@@ -1,6 +1,8 @@
 import glob, os, cv2, csv
 
-os.chdir("data")
+DATA_FOLDER = "mikasa"
+
+os.chdir(os.path.join("data",DATA_FOLDER))
 print("Controls:")
 print("[1] if image shows ball")
 print("[0] if image does not show ball")

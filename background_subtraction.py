@@ -5,22 +5,30 @@ import numpy as np
 import time
 import csv
 
-
-RUN_VIDEO = True  # Run Main Loop
-USE_IMAGE_CLASSIFICATION_MODEL = True  # Determine whether to used image classification model
 MODEL = "0.9818182-1571182058"  # Model name to be used (.h5 format)
-CREATE_TRAINING_DATA = False  # Used to create training set in data/
 VID_NAME = "vid1"  # Video file found in vids/
 VID_FORMAT = ".mp4"  # Video format
-KERNEL_RESOLUTION = 200  # Higher = More objects detected in frame
-MAX_CONTOURS = 100  # Limit the number of contours for performance
-PREDICT_BALL_LOCATION = True  # Turn on to keep ball location predictions history
-CLASSIFICATION_THRESHOLD = 0.2  # 0-1 Which contours to evaluate for predictions
+
 SAVE_OUTPUT = False  # Toggle whether to save the locations of the ball or not
+
 BALL_TRAIL_FRAMES = 20  # Number of frames that the trail stays behind the ball
 SHOW_TRAIL = True  # Whether to show a trail or not
-WAIT_KEY = 0  # Speed of video playback, 0 to manually advance
+
 SHOW_VIDEO = True  # Whether video is displayed or not
+WAIT_KEY = 1  # Speed of video playback, 0 to manually advance
+
+CREATE_TRAINING_DATA = False  # Used to create training set in data/
+TRAINING_DATA_FOLDER = "mikasa"  # Folder for training data
+
+# Tentative decent results with the default settings
+KERNEL_RESOLUTION = 200  # Higher = More objects detected in frame (Default = 200)
+MAX_CONTOURS = 100  # Limit the number of contours for performance (Default = 100)
+CLASSIFICATION_THRESHOLD = 0.2  # 0-1 Which contours to evaluate for predictions (Default = 0.2)
+
+# Leave the following on True for proper usage of script
+RUN_VIDEO = True  # Run Main Loop
+PREDICT_BALL_LOCATION = True  # Turn on to keep ball location predictions history
+USE_IMAGE_CLASSIFICATION_MODEL = True  # Determine whether to used image classification model
 
 cap = cv2.VideoCapture("vids/" + VID_NAME + VID_FORMAT)
 cap_width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
@@ -29,7 +37,6 @@ num_frames_max = cap.get(cv2.CAP_PROP_FRAME_COUNT)
 kernel_size = int(cap_width / KERNEL_RESOLUTION)
 fgbg = cv2.createBackgroundSubtractorMOG2(varThreshold=50)
 
-
 if USE_IMAGE_CLASSIFICATION_MODEL:
     model = load_model('models/' + MODEL + '.h5')
 else:
@@ -37,7 +44,7 @@ else:
 
 
 def clean_trajectories(traj):
-    output = [[traj[0][0],traj[0][1]]]
+    output = [[traj[0][0], traj[0][1]]]
 
     for i, t in enumerate(traj[1:]):
         diff = int(t[2] - traj[i][2])
@@ -72,9 +79,9 @@ class Prediction:
             self.hist[-1][2] + (self.hist[-1][4] * (frame_n - self.hist[-1][0]))
         ]
 
-
     def confidence(self, frame_n):
-        return (((2*((self.hist[-1][3]**2)+(self.hist[-1][4]**2)**0.5))**(frame_n-self.hist[-1][0]))+100)
+        return (((2 * ((self.hist[-1][3] ** 2) + (self.hist[-1][4] ** 2) ** 0.5)) ** (
+                frame_n - self.hist[-1][0])) + 100)
 
 
 def classify_contours(contour_list, target_frame):
@@ -89,19 +96,20 @@ def classify_contours(contour_list, target_frame):
         img = np.expand_dims(img, axis=0)
         probability = model.predict_proba(img)
         probs.append(probability[0][1])
-        #cv2.putText(frame, str(probability[0][1]), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255))
-        #cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        # cv2.putText(frame, str(probability[0][1]), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255))
+        # cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
     return probs
 
 
 def distance(arr_a, arr_b):
     return ((arr_a[0] - arr_b[0]) ** 2 + (arr_a[1] - arr_b[1]) ** 2) ** 0.5
 
+
 output = []
 if SHOW_TRAIL:
     output_realtime = []
 output_img = None
-prediction = Prediction(0,cap_width/2,cap_height/2)
+prediction = Prediction(0, cap_width / 2, cap_height / 2)
 if RUN_VIDEO:
     while True:
         ret, frame = cap.read()
@@ -110,8 +118,8 @@ if RUN_VIDEO:
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
         opening = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel, iterations=2)
         opening = cv2.dilate(opening, kernel, iterations=1)
-
         _, thresh = cv2.threshold(opening, 20, 255, cv2.THRESH_BINARY)
+
         if frame_n > 1:
             contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             if contours:
@@ -122,7 +130,8 @@ if RUN_VIDEO:
                             if w > 10:
                                 if h > 10:
                                     roi = frame[y: y + h, x: x + w]
-                                    filename = 'data/' + VID_NAME + '-' + str(frame_n) + '-' + str(i) + '.png'
+                                    filename = 'data/' + TRAINING_DATA_FOLDER + '/' + VID_NAME + '-' + \
+                                               str(frame_n) + '-' + str(i) + '.png'
                                     cv2.imwrite(filename, roi)
                     if USE_IMAGE_CLASSIFICATION_MODEL:
                         probabilities = classify_contours(contours, frame)
@@ -134,34 +143,35 @@ if RUN_VIDEO:
                             potentials = []
                             for i, p in enumerate(probabilities):
                                 x, y, w, h = cv2.boundingRect(contours[i])
-                                dist = distance(predicted_location,[x+w/2,y+h/2])
-                                if dist<1:
+                                dist = distance(predicted_location, [x + w / 2, y + h / 2])
+                                if dist < 1:
                                     dist = 1
-                                if dist<predicted_confidence:
-                                    if p>CLASSIFICATION_THRESHOLD:
-                                        cv2.putText(frame, str(dist), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255))
-                                        potentials.append(p/dist)
+                                if dist < predicted_confidence:
+                                    if p > CLASSIFICATION_THRESHOLD:
+                                        cv2.putText(frame, str(dist), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                                    (0, 255, 255))
+                                        potentials.append(p / dist)
 
                                     else:
                                         potentials.append(0)
                                 else:
                                     potentials.append(0)
                             max_value = max(potentials)
-                            if max_value>0:
+                            if max_value > 0:
                                 max_potential = potentials.index(max_value)
                                 x, y, w, h = cv2.boundingRect(contours[max_potential])
                                 cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                                prediction.new_point(frame_n,x+w/2,y+h/2)
-                                print(x,y)
-                                output.append([x+w/2,y+h/2,frame_n])
+                                prediction.new_point(frame_n, x + w / 2, y + h / 2)
+                                print(x, y)
+                                output.append([x + w / 2, y + h / 2, frame_n])
                                 if SHOW_TRAIL:
                                     output_realtime = clean_trajectories(output[-BALL_TRAIL_FRAMES:])
-                                #TODO: Implement Machine Learning Training
+                                # TODO: Implement Machine Learning Training
                             else:
                                 x = int(predicted_location[0])
                                 y = int(predicted_location[1])
-                                cv2.rectangle(frame, (x, y), (x+10, y+10), (0, 0, 255), 2)
-                                prediction.new_point(frame_n,x,y)
+                                cv2.rectangle(frame, (x, y), (x + 10, y + 10), (0, 0, 255), 2)
+                                prediction.new_point(frame_n, x, y)
                             if SHOW_TRAIL:
                                 cv2.polylines(frame, [output_realtime], 0, (0, 0, 255), 3)
 
@@ -186,9 +196,8 @@ if RUN_VIDEO:
             k = cv2.waitKey(WAIT_KEY)
             if k == 27:
                 break
-            if frame_n==num_frames_max:
+            if frame_n == num_frames_max:
                 break
-
 
 cap.release()
 cv2.destroyAllWindows()

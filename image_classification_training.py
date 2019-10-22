@@ -11,15 +11,16 @@ import glob
 import time
 
 TEST_MODEL = True
+DATA_FOLDER = "mikasa"
 MODELS = ["Sequential-1"]
 MODEL_USED = 0
 
-train = pd.read_csv('data/annotated_data/annotations.csv')
+train = pd.read_csv('data/' + DATA_FOLDER + '/annotated_data/annotations.csv')
 train_images = []
 
 if MODELS[MODEL_USED] == "Sequential-1":
     for i in tqdm(range(train.shape[0])):
-        img = image.load_img('data/annotated_data/' + train['id'][i], target_size=(28, 28, 3), grayscale=False)
+        img = image.load_img('data/' + DATA_FOLDER + '/annotated_data/' + train['id'][i], target_size=(28, 28, 3), grayscale=False)
         img = image.img_to_array(img)
         img = img / 255
         train_images.append(img)
@@ -46,7 +47,7 @@ if MODELS[MODEL_USED] == "Sequential-1":
     history = model.fit(X_train, y_train, epochs=10, validation_data=(X_test,y_test))
 
     try:
-        model.save('models/' + str(history.history.get('accuracy')[-1]) + "-" + str(int(time.time())) + '.h5')
+        model.save('models/' + DATA_FOLDER + '-' + str(history.history.get('accuracy')[-1]) + "-" + str(int(time.time())) + '.h5')
         print("Model Saved: " + str(history.history.get('accuracy')[-1]) + "-" + str(int(time.time())) + '.h5')
     except:
         print("Something went wrong")
