@@ -1,6 +1,9 @@
 # Volleyball Ball Tracking:
 This code is used to train and use software to track a beach volleyball using Neural Networks and Open CV
 
+![Imgur](https://i.imgur.com/b7uW12T.png)
+
+
 # How to:
 **background_subtraction.py**
 
